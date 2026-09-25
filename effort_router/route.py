@@ -34,7 +34,19 @@ def claude_agent(tool_input, policy):
 
     updated = dict(tool_input)
     updated["subagent_type"] = host["agent_prefix"] + agent
+    model = host.get("models", {}).get(decision.klass)
+    if model and not tool_input.get("model"):
+        updated["model"] = model
     return updated, decision
+
+
+def claude_is_generic(tool_input, policy):
+    return (tool_input.get("subagent_type") or "") in policy["hosts"]["claude"]["routable_types"]
+
+
+def claude_mode(policy):
+    mode = policy["hosts"]["claude"].get("mode", "ask")
+    return mode if mode in ("ask", "route", "off") else "ask"
 
 
 def agy_invoke(args, policy):

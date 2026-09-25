@@ -52,6 +52,7 @@ class ClaudeRouteTest(unittest.TestCase):
             POLICY,
         )
         self.assertEqual(updated["subagent_type"], "effort-router:effort-low")
+        self.assertEqual(updated["model"], "sonnet")
         self.assertEqual(updated["prompt"], "Переименуй foo в bar")
 
     def test_missing_type_is_routed(self):
@@ -99,29 +100,73 @@ class AgyRouteTest(unittest.TestCase):
 
 
 class HookProcessTest(unittest.TestCase):
-    def run_hook(self, script, payload, **env):
-        with tempfile.TemporaryDirectory() as state:
-            result = subprocess.run(
-                [sys.executable, str(ROOT / script)],
-                input=payload if isinstance(payload, str) else json.dumps(payload),
-                capture_output=True,
-                text=True,
-                env={**os.environ, "XDG_STATE_HOME": state, "EFFORT_ROUTER_POLICY": "/nonexistent", **env},
-                timeout=30,
-            )
-            log = Path(state) / "effort-router" / "dispatch.jsonl"
-            return result, (log.read_text() if log.exists() else "")
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.state = Path(self.tmp.name) / "state"
+        self.override = Path(self.tmp.name) / "policy.json"
 
-    def test_claude_hook_emits_updated_input_and_logs(self):
-        result, log = self.run_hook(
-            "hooks/claude_pre_agent.py",
-            {"tool_input": {"subagent_type": "general-purpose", "prompt": "Find all usages of foo"}},
+    def run_hook(self, script, payload, **env):
+        result = subprocess.run(
+            [sys.executable, str(ROOT / script)],
+            input=(payload if isinstance(payload, str) else json.dumps(payload, ensure_ascii=False)).encode("utf-8"),
+            capture_output=True,
+            env={**os.environ, "XDG_STATE_HOME": str(self.state), "EFFORT_ROUTER_POLICY": str(self.override), **env},
+            timeout=30,
         )
-        self.assertEqual(result.returncode, 0)
-        out = json.loads(result.stdout)["hookSpecificOutput"]
+        result.stdout = result.stdout.decode("utf-8")
+        log = self.state / "effort-router" / "dispatch.jsonl"
+        return result, (log.read_text(encoding="utf-8") if log.exists() else "")
+
+    def spawn(self, prompt, session="s1", subagent_type="general-purpose"):
+        return {"session_id": session, "tool_input": {"subagent_type": subagent_type, "prompt": prompt}}
+
+    def test_ask_mode_bounces_once_with_guide_then_routes(self):
+        first, log = self.run_hook("hooks/claude_pre_agent.py", self.spawn("Найди все использования foo"))
+        out = json.loads(first.stdout)["hookSpecificOutput"]
+        self.assertEqual(out["permissionDecision"], "deny")
+        self.assertIn("effort-router:effort-scout", out["permissionDecisionReason"])
+        self.assertIn('"action": "ask"', log)
+
+        # The model repeats the very same generic spawn: route it, never loop.
+        second, log = self.run_hook("hooks/claude_pre_agent.py", self.spawn("Найди все использования foo"))
+        out = json.loads(second.stdout)["hookSpecificOutput"]
         self.assertEqual(out["permissionDecision"], "allow")
         self.assertEqual(out["updatedInput"]["subagent_type"], "effort-router:effort-low")
         self.assertIn('"action": "rewrite"', log)
+
+    def test_ask_mode_is_per_session(self):
+        self.run_hook("hooks/claude_pre_agent.py", self.spawn("rename x", session="a"))
+        other, _ = self.run_hook("hooks/claude_pre_agent.py", self.spawn("rename x", session="b"))
+        self.assertEqual(json.loads(other.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_chosen_agent_passes_untouched(self):
+        result, _ = self.run_hook(
+            "hooks/claude_pre_agent.py", self.spawn("rename x", subagent_type="effort-router:effort-low")
+        )
+        self.assertEqual(result.stdout, "")
+
+    def test_route_mode_rewrites_silently(self):
+        self.override.write_text(json.dumps({"hosts": {"claude": {"mode": "route"}}}), encoding="utf-8")
+        result, _ = self.run_hook("hooks/claude_pre_agent.py", self.spawn("Переименуй foo в bar"))
+        out = json.loads(result.stdout)["hookSpecificOutput"]
+        self.assertEqual(out["updatedInput"]["subagent_type"], "effort-router:effort-low")
+        self.assertEqual(out["updatedInput"]["model"], "sonnet")
+
+    def test_session_start_injects_guide(self):
+        result, _ = self.run_hook("hooks/claude_session_start.py", {"session_id": "s1"})
+        out = json.loads(result.stdout)["hookSpecificOutput"]
+        self.assertEqual(out["hookEventName"], "SessionStart")
+        self.assertIn("effort-router:effort-xhigh", out["additionalContext"])
+
+    def test_off_mode_disables_both_hooks(self):
+        self.override.write_text(json.dumps({"hosts": {"claude": {"mode": "off"}}}), encoding="utf-8")
+        for script, payload in (
+            ("hooks/claude_pre_agent.py", self.spawn("rename x")),
+            ("hooks/claude_session_start.py", {"session_id": "s1"}),
+        ):
+            result, _ = self.run_hook(script, payload)
+            self.assertEqual(result.stdout, "", script)
 
     def test_claude_hook_fails_open(self):
         result, _ = self.run_hook("hooks/claude_pre_agent.py", "not json")
@@ -130,7 +175,7 @@ class HookProcessTest(unittest.TestCase):
     def test_claude_hook_can_be_disabled(self):
         result, _ = self.run_hook(
             "hooks/claude_pre_agent.py",
-            {"tool_input": {"subagent_type": "general-purpose", "prompt": "rename x"}},
+            self.spawn("rename x"),
             EFFORT_ROUTER="off",
         )
         self.assertEqual(result.stdout, "")

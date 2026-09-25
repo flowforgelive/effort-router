@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from effort_router import guide  # noqa: E402
 from effort_router import policy as policy_mod  # noqa: E402
 
 TARGETS = [
@@ -23,32 +24,6 @@ BEGIN = "<!-- effort-router:classes:begin -->"
 END = "<!-- effort-router:classes:end -->"
 
 
-def table(policy):
-    claude = policy["hosts"]["claude"]
-    agy_tiers = policy["hosts"]["agy"]["tiers"]
-    rows = [
-        "| Класс | Уровень | Когда | Claude Code | Codex `spawn_agent` | agy `invoke_subagent` |",
-        "|---|---|---|---|---|---|",
-    ]
-    for klass, spec in policy["classes"].items():
-        level = policy_mod.clamp(spec["level"], policy)
-        agent = claude["read_only_agent"] if spec.get("read_only") else claude["agents"][level]
-        rows.append(
-            f"| `{klass}` | `{level}` | {spec['summary']} "
-            f"| `{claude['agent_prefix']}{agent}` "
-            f"| `reasoning_effort: \"{level}\"` "
-            f"| `Model: \"{agy_tiers.get(level, 'inherit')}\"` |"
-        )
-    floor = policy.get("floor") or {}
-    rows += [
-        "",
-        f"Класс не ясен — уровень `{policy['default_level']}`. "
-        + (f"Минимум `{floor['level']}` — {floor['why'][0].lower()}{floor['why'][1:]} " if floor else "")
-        + f"Потолок для субагентов — `{policy['levels'][-1]}` (`max` не используется).",
-    ]
-    return "\n".join(rows)
-
-
 def render(text, block):
     pattern = re.compile(re.escape(BEGIN) + r".*?" + re.escape(END), re.S)
     if not pattern.search(text):
@@ -58,7 +33,7 @@ def render(text, block):
 
 def main():
     check = "--check" in sys.argv[1:]
-    block = table(policy_mod.load(policy_mod.DEFAULT_POLICY))
+    block = guide.table(policy_mod.load(policy_mod.DEFAULT_POLICY))
     drifted = []
     for path in TARGETS:
         current = path.read_text(encoding="utf-8")

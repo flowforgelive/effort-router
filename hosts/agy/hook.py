@@ -4,12 +4,11 @@
 Fail-open: any error leaves the call unchanged. EFFORT_ROUTER=off disables it.
 """
 
-import json
 import os
 import sys
 from pathlib import Path
 
-# The plugin directory is symlinked into ~/.gemini/config/plugins; resolve to the repo.
+# The installer points the hook at this file inside the repo; resolve the package from there.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 ALLOW = {"decision": "allow"}
@@ -18,9 +17,9 @@ ALLOW = {"decision": "allow"}
 def main():
     if os.environ.get("EFFORT_ROUTER") == "off":
         return ALLOW
-    from effort_router import dispatch_log, policy, route
+    from effort_router import dispatch_log, hookio, policy, route
 
-    event = json.load(sys.stdin)
+    event = hookio.read_event()
     call = event.get("toolCall") or {}
     if call.get("name") != "invoke_subagent" or not isinstance(call.get("args"), dict):
         return ALLOW
@@ -42,5 +41,10 @@ if __name__ == "__main__":
         result = main()
     except Exception:
         result = ALLOW
-    json.dump(result, sys.stdout)
+    try:
+        from effort_router import hookio
+
+        hookio.emit(result)
+    except Exception:
+        sys.stdout.write('{"decision": "allow"}')
     sys.exit(0)

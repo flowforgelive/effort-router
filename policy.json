@@ -55,6 +55,7 @@
   },
   "hosts": {
     "claude": {
+      "mode": "ask",
       "agent_prefix": "effort-router:",
       "agents": {
         "low": "effort-low",
@@ -63,6 +64,10 @@
         "xhigh": "effort-xhigh"
       },
       "read_only_agent": "effort-scout",
+      "models": {
+        "scout": "haiku",
+        "mechanical": "sonnet"
+      },
       "routable_types": ["", "general-purpose", "claude", "Explore"]
     },
     "codex": {},

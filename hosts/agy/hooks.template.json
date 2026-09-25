@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ./hook.py",
+            "command": "{launcher}",
             "timeout": 10
           }
         ]
