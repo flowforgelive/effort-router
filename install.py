@@ -66,7 +66,8 @@ class Installer:
         if not self.dry_run:
             self.backup(path)
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(new, encoding="utf-8", newline="\n")
+            with open(path, "w", encoding="utf-8", newline="\n") as fh:
+                fh.write(new)
         return True
 
     def owned(self, path):
@@ -92,7 +93,7 @@ class Installer:
             if isinstance(content, Path):
                 shutil.copy2(content, dest)
             else:
-                dest.write_text(content, encoding="utf-8", newline="\n")
+                dest.write_bytes(content.encode("utf-8"))
 
     def tree_matches(self, target, files):
         if target.is_symlink() or not (target / MARKER).exists():
@@ -105,7 +106,7 @@ class Installer:
             if isinstance(content, Path):
                 if not filecmp.cmp(content, dest, shallow=False):
                     return False
-            elif dest.read_text(encoding="utf-8") != content:
+            elif dest.read_bytes() != content.encode("utf-8"):
                 return False
         return True
 
