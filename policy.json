@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "levels": ["low", "medium", "high", "xhigh"],
+  "default_level": "medium",
+  "floor": {
+    "level": "high",
+    "why": "Ошибка здесь не видна сразу и дорого стоит: безопасность, конкурентность, миграции данных, прод.",
+    "signals": [
+      "\\bsecurit", "\\bvulnerab", "\\bauth(entication|orization)?\\b", "\\bcrypto", "\\bmigrat", "\\brace condition", "\\bconcurren", "\\bdeadlock", "\\bprod(uction)?\\b",
+      "безопасн", "уязвим", "авториз", "аутентиф", "крипт", "миграц", "гонк[аиу]", "конкурентн", "дедлок", "взаимоблокир", "\\bпрод\\b"
+    ]
+  },
+  "classes": {
+    "scout": {
+      "level": "low",
+      "read_only": true,
+      "summary": "Разведка: найти файлы и определения, перечислить использования, описать структуру каталогов. Вывод — пути и строки, без суждений.",
+      "signals": [
+        "\\bfind (all|where|every|usages|the file)", "\\bwhere (is|are)\\b.*\\b(defined|used|called)", "\\blocate\\b", "\\blist (all|every|the files)", "\\benumerate\\b", "\\bsearch (for|the codebase)", "\\bgrep\\b", "\\bmap (the|out)\\b.*\\b(structure|directory|modules)",
+        "\\bнайди\\b", "\\bнайти\\b", "\\bгде (определ|использ|вызыва|лежит|лежат)", "\\bперечисли", "\\bсписок (файлов|мест|использований)", "\\bпоиск\\b", "\\bструктур[ауы] (каталог|модул|репо)"
+      ]
+    },
+    "mechanical": {
+      "level": "low",
+      "summary": "Механическая правка по точной инструкции: переименовать, отформатировать, поднять версию, поправить импорт или опечатку.",
+      "signals": [
+        "\\brename\\b", "\\breformat", "\\bformat (the|this|all)\\b", "\\bbump\\b.*\\bversion", "\\bsort (the )?imports", "\\btypo\\b", "\\bmove (the )?file", "\\bupdate the (import|version|copyright)",
+        "\\bпереимен", "\\bотформатир", "\\bформатирован", "\\bподними версию", "\\bопечатк", "\\bперенеси файл", "\\bпоправь импорт", "\\bотсортируй"
+      ]
+    },
+    "implement": {
+      "level": "medium",
+      "summary": "Обычная реализация: написать функцию, тест, эндпоинт, экран; рефакторинг в пределах модуля по понятной задаче.",
+      "signals": [
+        "\\bimplement", "\\bwrite (a|an|the)?\\s*(function|test|class|component|endpoint|script)", "\\badd (a|an|the)?\\s*(feature|endpoint|test|method|field|screen)", "\\brefactor", "\\bbuild (a|the)\\b",
+        "\\bреализ", "\\bнапиши", "\\bдобав(ь|ить) (функц|метод|тест|класс|эндпоинт|экран|поле)", "\\bрефактор", "\\bсделай (функц|метод|класс|экран)"
+      ]
+    },
+    "debug": {
+      "level": "high",
+      "summary": "Диагностика: почему падает тест или сборка, разбор стектрейса, регрессия, флейки, поиск корневой причины.",
+      "signals": [
+        "\\bdebug", "\\bwhy (does|is|do)\\b.*\\b(fail|break|crash|hang)", "\\bfailing\\b", "\\bcrash", "\\bstack ?trace", "\\bregression", "\\bflak(y|e)", "\\broot cause", "\\bbisect", "\\breproduc",
+        "\\bотлад", "\\bпочему (падает|не работает|ломается|виснет|зависает)", "\\bпада(ет|ют)\\b", "\\bстектрейс", "\\bрегресс", "\\bфлейк", "\\bкорнев(ая|ую) причин", "\\bвоспроизвед"
+      ]
+    },
+    "deep": {
+      "level": "xhigh",
+      "summary": "Глубокое рассуждение: архитектура и компромиссы, ревью сложного изменения, безопасность, конкурентность, тонкая алгоритмика.",
+      "signals": [
+        "\\barchitect", "\\btrade-?offs?\\b", "\\bdesign (doc|decision|review)", "\\bcode review\\b", "\\breview (the|this) (change|diff|pr)", "\\baudit", "\\bthreat model", "\\badversarial",
+        "\\bархитектур", "\\bкомпромисс", "\\bспроектир", "\\bревью\\b", "\\bаудит", "\\bмодель угроз", "\\bсостязательн"
+      ]
+    }
+  },
+  "hosts": {
+    "claude": {
+      "agent_prefix": "effort-router:",
+      "agents": {
+        "low": "effort-low",
+        "medium": "effort-medium",
+        "high": "effort-high",
+        "xhigh": "effort-xhigh"
+      },
+      "read_only_agent": "effort-scout",
+      "routable_types": ["", "general-purpose", "claude", "Explore"]
+    },
+    "codex": {},
+    "agy": {
+      "tiers": {
+        "low": "flash"
+      }
+    }
+  }
+}

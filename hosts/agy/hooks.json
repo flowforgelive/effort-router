@@ -1,0 +1,16 @@
+{
+  "effort-router": {
+    "PreToolUse": [
+      {
+        "matcher": "invoke_subagent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ./hook.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "effort-router",
+  "description": "Кросс-хостовый маршрутизатор reasoning effort для субагентов.",
+  "owner": {
+    "name": "effort-router"
+  },
+  "plugins": [
+    {
+      "name": "effort-router",
+      "description": "Автоматический выбор reasoning effort для субагентов.",
+      "source": "./"
+    }
+  ]
+}

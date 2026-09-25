@@ -1,0 +1,14 @@
+{
+  "name": "effort-router",
+  "version": "0.1.0",
+  "description": "Автоматический выбор reasoning effort для субагентов: лестница агентов по уровням, хук, переводящий общие спавны на нужную ступень, и скил с классами задач и протоколом эскалации.",
+  "author": {
+    "name": "effort-router"
+  },
+  "keywords": [
+    "subagents",
+    "effort",
+    "routing",
+    "cost"
+  ]
+}
