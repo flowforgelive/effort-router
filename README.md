@@ -21,7 +21,7 @@
 Нужен Python 3.9+ без сторонних пакетов.
 
 ```bash
-git clone <url этого репозитория> ~/dev/effort-router
+git clone https://github.com/flowforgelive/effort-router.git ~/dev/effort-router
 cd ~/dev/effort-router
 python3 install.py --dry-run     # посмотреть, что изменится
 python3 install.py               # установить во все найденные CLI
